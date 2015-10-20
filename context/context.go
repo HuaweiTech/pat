@@ -16,7 +16,7 @@ type Context interface {
 	GetBool(k string) (bool, bool)
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
-	Clone() contextMap
+	Clone() Context
 }
 
 type contextMap map[string]interface{}
@@ -85,7 +85,7 @@ func (c contextMap) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &m)
 }
 
-func (c contextMap) Clone() contextMap {
+func (c contextMap) Clone() Context {
 	var clone = make(contextMap)
 	for k, v := range c {
 		clone[k] = v
