@@ -1,6 +1,8 @@
 package context_test
 
 import (
+	"io/ioutil"
+
 	"github.com/cloudfoundry-incubator/pat/context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -73,6 +75,31 @@ var _ = Describe("Context map", func() {
 
 			result, _ = cloned.GetString("str1")
 			Ω(result).Should(Equal("abc"))
+		})
+	})
+
+	Context("When multiusers is set", func() {
+		JustBeforeEach(func() {
+			ioutil.WriteFile("/tmp/users.json", []byte(`[["user1", "password1"], ["user2", "password2"]]`), 0755)
+			err := localContext.SetUsers("/tmp/users.json")
+			Ω(err).ShouldNot(HaveOccurred())
+
+		})
+		Context("Cloning map many times", func() {
+			It("get user sequence and loop", func() {
+				cloned := localContext.Clone()
+				result, _ := cloned.GetString("rest:username")
+				Ω(result).Should(Equal("user1"))
+
+				cloned = localContext.Clone()
+				result, _ = cloned.GetString("rest:username")
+				Ω(result).Should(Equal("user2"))
+
+				cloned = localContext.Clone()
+				result, _ = cloned.GetString("rest:username")
+				Ω(result).Should(Equal("user1"))
+
+			})
 		})
 	})
 
