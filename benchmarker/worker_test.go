@@ -17,6 +17,7 @@ var _ = Describe("LocalWorker", func() {
 	It("Visits all of the added experiements", func() {
 		worker := &defaultWorker{make(map[string]WorkloadStep)}
 		experiements := []string{"foo", "bar", "barry"}
+		workloadnames := []string{}
 		index := 0
 
 		worker.AddWorkloadStep(Step("foo", func() error { return nil }, ""))
@@ -24,10 +25,11 @@ var _ = Describe("LocalWorker", func() {
 		worker.AddWorkloadStep(Step("barry", func() error { return nil }, ""))
 
 		worker.Visit(func(workload WorkloadStep) {
-			Ω(workload.Name).Should(Equal(experiements[index]))
+			workloadnames = append(workloadnames, workload.Name)
 			index++
 		})
 
+		Ω(workloadnames).Should(ConsistOf(experiements))
 		Ω(index).Should(BeNumerically("==", len(experiements)))
 	})
 
