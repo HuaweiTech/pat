@@ -39,7 +39,7 @@ var _ = Describe("Rest", func() {
 
 		BeforeEach(func() {
 			restContext = context.New()
-			restContext.PutInt("iterationIndex", 0)
+			restContext.PutInt("workerIndex", 0)
 			replies = make(map[string]interface{})
 			replyWithLocation = make(map[string]string)
 			client = &dummyClient{replies, replyWithLocation, make(map[call]interface{})}
@@ -216,14 +216,14 @@ var _ = Describe("Rest", func() {
 						Ω(data.(url.Values)["password"]).Should(Equal([]string{"pass1"}))
 					})
 
-					It("uses different username and password with different iterationIndex", func() {
-						restContext.PutInt("iterationIndex", 0)
+					It("uses different username and password with different workerIndex", func() {
+						restContext.PutInt("workerIndex", 0)
 						rest.Login(restContext)
 						data := client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user1"}))
 						Ω(data.(url.Values)["password"]).Should(Equal([]string{"pass1"}))
 
-						restContext.PutInt("iterationIndex", 2)
+						restContext.PutInt("workerIndex", 2)
 						rest.Login(restContext)
 						data = client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user3"}))
@@ -231,7 +231,7 @@ var _ = Describe("Rest", func() {
 					})
 
 					It("recycles the list of username and password when there are more workers than username", func() {
-						restContext.PutInt("iterationIndex", 6)
+						restContext.PutInt("workerIndex", 6)
 						rest.Login(restContext)
 						data := client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user1"}))
@@ -254,19 +254,19 @@ var _ = Describe("Rest", func() {
 					})
 
 					It("re-uses the only avaiable password", func() {
-						restContext.PutInt("iterationIndex", 0)
+						restContext.PutInt("workerIndex", 0)
 						rest.Login(restContext)
 						data := client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user1"}))
 						Ω(data.(url.Values)["password"]).Should(Equal([]string{"pass1"}))
 
-						restContext.PutInt("iterationIndex", 1)
+						restContext.PutInt("workerIndex", 1)
 						rest.Login(restContext)
 						data = client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user2"}))
 						Ω(data.(url.Values)["password"]).Should(Equal([]string{"pass1"}))
 
-						restContext.PutInt("iterationIndex", 2)
+						restContext.PutInt("workerIndex", 2)
 						rest.Login(restContext)
 						data = client.ShouldHaveBeenCalledWith("POST(uaa)", "THELOGINSERVER/PATH/oauth/token")
 						Ω(data.(url.Values)["username"]).Should(Equal([]string{"user3"}))

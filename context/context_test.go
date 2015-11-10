@@ -74,6 +74,18 @@ var _ = Describe("Context map", func() {
 			result, _ = cloned.GetString("str1")
 			Ω(result).Should(Equal("abc"))
 		})
+		It("record workerIndex", func() {
+
+			cloned := localContext.Clone()
+			index, exists := cloned.GetInt("workerIndex")
+			Ω(exists).ShouldNot(BeFalse())
+			Ω(index).Should(Equal(0))
+			cloned = localContext.Clone()
+			index, exists = cloned.GetInt("workerIndex")
+			Ω(exists).ShouldNot(BeFalse())
+			Ω(index).Should(Equal(1))
+
+		})
 	})
 
 })

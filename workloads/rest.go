@@ -56,9 +56,9 @@ func (r *rest) Target(ctx context.Context) error {
 func (r *rest) Login(ctx context.Context) error {
 	body := &LoginResponse{}
 
-	iterationIndex, exist := ctx.GetInt("iterationIndex")
+	workerIndex, exist := ctx.GetInt("workerIndex")
 	if !exist {
-		return errors.New("Iteration Index does not exist in context map")
+		return errors.New("Worker Index does not exist in context map")
 	}
 
 	var userList, passList string
@@ -74,7 +74,7 @@ func (r *rest) Login(ctx context.Context) error {
 	}
 
 	return checkTargetted(ctx, func(loginEndpoint string, apiEndpoint string) error {
-		return r.PostToUaaSuccessfully(fmt.Sprintf("%s/oauth/token", loginEndpoint), r.oauthInputs(credentialsForWorker(iterationIndex, userList, passList)), body, func(reply Reply) error {
+		return r.PostToUaaSuccessfully(fmt.Sprintf("%s/oauth/token", loginEndpoint), r.oauthInputs(credentialsForWorker(workerIndex, userList, passList)), body, func(reply Reply) error {
 			ctx.PutString("token", body.Token)
 			return r.targetSpace(ctx)
 		})
@@ -246,10 +246,10 @@ func (s SpaceResponse) SpaceExists() bool {
 	return len(s.Resources) > 0
 }
 
-func credentialsForWorker(iterationIndex int, users string, passwords string) (string, string) {
+func credentialsForWorker(workerIndex int, users string, passwords string) (string, string) {
 	var userList = strings.Split(users, ",")
 	var passList = strings.Split(passwords, ",")
-	return userList[iterationIndex%len(userList)], passList[iterationIndex%len(passList)]
+	return userList[workerIndex%len(userList)], passList[workerIndex%len(passList)]
 }
 
 func (r *rest) oauthInputs(username string, password string) url.Values {
