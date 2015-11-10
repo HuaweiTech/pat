@@ -84,6 +84,26 @@ var _ = Describe("Cmdline", func() {
 		})
 	})
 
+	Describe("When -cfhomes is supplied", func() {
+		var (
+			ctx context.Context
+		)
+
+		BeforeEach(func() {
+			ctx = context.New()
+			args = []string{"-cfhomes", "somehomes"}
+			NewContext = func() context.Context {
+				return ctx
+			}
+		})
+
+		It("configures the experiment with the parameter", func() {
+			path, ok := ctx.GetString("cfhomes")
+			Ω(ok).To(BeTrue())
+			Ω(path).To(Equal("somehomes"))
+		})
+	})
+
 	Describe("When -app is supplied", func() {
 		var (
 			ctx context.Context

@@ -27,6 +27,7 @@ var params = struct {
 	workload            string
 	interval            int
 	stop                int
+	cfHomes             string
 	restUser            string
 	restPass            string
 	restTarget          string
@@ -45,6 +46,7 @@ func InitCommandLineFlags(config config.Config) {
 	config.IntVar(&params.stop, "stop", 0, "repeat a repeating interval until n seconds, to be used with -interval")
 	config.BoolVar(&params.listWorkloads, "list-workloads", false, "Lists the available workloads")
 	config.StringVar(&params.restTarget, "rest:target", "", "the target for the REST api")
+	config.StringVar(&params.cfHomes, "cfhomes", "", "cfhome for cli")
 	config.StringVar(&params.restUser, "rest:username", "", "username for REST api")
 	config.StringVar(&params.restPass, "rest:password", "", "password for REST api")
 	config.StringVar(&params.restSpace, "rest:space", "dev", "space to target for REST api")
@@ -58,6 +60,7 @@ func RunCommandLine() error {
 	workloadContext := NewContext()
 	workloads.PopulateRestContext(params.restTarget, params.restUser, params.restPass, params.restSpace, workloadContext)
 	workloads.PopulateAppContext(params.app, params.manifest, workloadContext)
+	workloads.PopulateCliContext(params.cfHomes, workloadContext)
 
 	return WithConfiguredWorkerAndSlaves(func(worker benchmarker.Worker) error {
 		return validateParameters(worker, func() error {

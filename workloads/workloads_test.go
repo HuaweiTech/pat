@@ -78,4 +78,15 @@ var _ = Describe("Workloads", func() {
 		})
 
 	})
+
+	Describe("#PopulateCliContext", func() {
+		It("inserts the cfhomes into the context", func() {
+			ctx := context.New()
+			PopulateCliContext("somehomes", ctx)
+			homePath, ok := ctx.GetString("cfhomes")
+			Ω(Expect(ok).To(BeTrue()))
+			Ω(Expect(homePath).To(Equal("somehomes")))
+
+		})
+	})
 })

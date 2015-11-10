@@ -68,6 +68,10 @@ func PopulateAppContext(appPath string, manifestPath string, ctx context.Context
 	return nil
 }
 
+func PopulateCliContext(cfhomes string, ctx context.Context) {
+	ctx.PutString("cfhomes", cfhomes)
+}
+
 func normalizePath(aPath string) (string, error) {
 	if aPath == "" {
 		return "", nil
