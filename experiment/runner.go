@@ -1,6 +1,7 @@
 package experiment
 
 import (
+	//	"fmt"
 	"math"
 	"time"
 
@@ -19,12 +20,13 @@ const (
 )
 
 type Command struct {
-	Count      int64
-	Throughput float64
-	Average    time.Duration
-	TotalTime  time.Duration
-	LastTime   time.Duration
-	WorstTime  time.Duration
+	Count                 int64
+	Throughput            float64
+	Average               time.Duration
+	TotalTime             time.Duration
+	LastTime              time.Duration
+	WorstTime             time.Duration
+	NinetyfifthPercentile time.Duration
 }
 
 type Sample struct {
@@ -193,6 +195,7 @@ func (ex *SamplableExperiment) Sample() {
 	var ninetyfifthPercentile time.Duration
 	var percentileLength = int(math.Floor(float64(ex.maxIterations)*.05 + 0.95))
 	var percentile = make([]time.Duration, percentileLength, percentileLength)
+	var stepPercentile = make(map[string][]time.Duration)
 	var heartbeat = time.NewTicker(1 * time.Second)
 	startTime := time.Now()
 
@@ -223,7 +226,8 @@ func (ex *SamplableExperiment) Sample() {
 			ninetyfifthPercentile = percentile[percentileLength-int(math.Floor(float64(iterations)*.05+0.95))]
 
 			for _, step := range iteration.Steps {
-				cmd := commands[step.Command]
+				stepindex := step.Command
+				cmd := commands[stepindex]
 				cmd.Count = cmd.Count + 1
 				cmd.TotalTime = cmd.TotalTime + step.Duration
 				cmd.LastTime = step.Duration
@@ -233,7 +237,21 @@ func (ex *SamplableExperiment) Sample() {
 					cmd.WorstTime = step.Duration
 				}
 
-				commands[step.Command] = cmd
+				stepPercent := stepPercentile[stepindex]
+				if len(stepPercent) == 0 {
+					stepPercent = make([]time.Duration, percentileLength, percentileLength)
+				}
+				if step.Duration > stepPercent[0] {
+					stepPercent[0] = step.Duration
+					for i := 0; i < percentileLength-1 && step.Duration > stepPercent[i+1]; i++ {
+						stepPercent[i] = stepPercent[i+1]
+						stepPercent[i+1] = step.Duration
+					}
+				}
+
+				stepPercentile[stepindex] = stepPercent
+				cmd.NinetyfifthPercentile = stepPercentile[stepindex][percentileLength-int(math.Floor(float64(iterations)*.05+0.95))]
+				commands[stepindex] = cmd
 			}
 
 			if iteration.Error != nil {
