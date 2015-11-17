@@ -74,7 +74,7 @@ func RunCommandLine() error {
 				handlers := make([]func(<-chan *Sample), 0)
 				if !params.silent {
 					handlers = append(handlers, func(s <-chan *Sample) {
-						display(params.concurrency, params.iterations, params.interval, params.stop, params.concurrencyStepTime, s)
+						display_table(params.concurrency, params.iterations, params.interval, params.stop, params.concurrencyStepTime, s)
 					})
 				}
 
