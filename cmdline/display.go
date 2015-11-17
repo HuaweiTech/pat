@@ -32,6 +32,7 @@ func display(concurrency string, iterations int, interval int, stop int, concurr
 			fmt.Printf("\x1b[1m%v\x1b[0m:\n", key)
 			fmt.Printf("\x1b[1m\tCount\x1b[0m:                 \x1b[36m%v\x1b[0m\n", command.Count)
 			fmt.Printf("\x1b[1m\tAverage\x1b[0m:               \x1b[36m%v\x1b[0m\n", command.Average)
+			fmt.Printf("\x1b[1m\t95th Percentile\x1b[0m:       \x1b[36m%v\x1b[0m\n", command.NinetyfifthPercentile)
 			fmt.Printf("\x1b[1m\tLast time\x1b[0m:             \x1b[36m%v\x1b[0m\n", command.LastTime)
 			fmt.Printf("\x1b[1m\tWorst time\x1b[0m:            \x1b[36m%v\x1b[0m\n", command.WorstTime)
 			fmt.Printf("\x1b[1m\tTotal time\x1b[0m:            \x1b[36m%v\x1b[0m\n", command.TotalTime)

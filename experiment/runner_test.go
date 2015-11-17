@@ -287,6 +287,29 @@ var _ = Describe("ExperimentConfiguration and Sampler", func() {
 				Ω((<-samples).NinetyfifthPercentile).Should(Equal(time.Duration(expectedPercentiles[q]) * time.Second))
 			}
 		})
+
+		It("Calculates the 95th percentile for command", func() {
+			samplesToSend := []int{2, 5, 1, 9, 12, 8, 19, 57, 33, 44, 1, 12, 43, 99, 98, 19, 34, 19, 7, 55, 23}
+			expectedPercentiles := []int{2, 5, 5, 9, 12, 12, 19, 57, 57, 57, 57, 57, 57, 99, 99, 99, 99, 99, 99, 99, 98}
+
+			go func() {
+				for i := 0; i < maxIterations; i++ {
+					iteration <- IterationResult{0,
+						[]StepResult{
+							StepResult{Command: "push", Duration: time.Duration(samplesToSend[i]) * time.Second},
+							StepResult{Command: "list", Duration: time.Duration(samplesToSend[i]) * time.Second},
+						},
+						nil}
+				}
+			}()
+
+			for q := 0; q < maxIterations; q++ {
+				sample := <-samples
+				Ω(sample.Commands["push"].NinetyfifthPercentile).Should(Equal(time.Duration(expectedPercentiles[q]) * time.Second))
+				Ω(sample.Commands["list"].NinetyfifthPercentile).Should(Equal(time.Duration(expectedPercentiles[q]) * time.Second))
+			}
+		})
+
 	})
 
 	Describe("Scheduling", func() {
