@@ -14,9 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudfoundry-incubator/cf-test-helpers/runner"
 	"github.com/cloudfoundry-incubator/pat/context"
 	"github.com/nu7hatch/gouuid"
 	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega/gexec"
 	. "github.com/pivotal-cf-experimental/cf-test-helpers/cf"
 )
 
@@ -70,10 +72,11 @@ func Push(ctx context.Context) error {
 	}
 	ctx.PutString("appNames", appNames)
 
+	cfhome := cfhomeForWorker(ctx)
 	if pathToManifest == "" {
-		return expectCfToSay("App started", "push", appName, "-m", "64M", "-p", pathToApp)
+		return expectCfToSay("App started", cfhome, "push", appName, "-m", "64M", "-p", pathToApp)
 	} else {
-		return expectCfToSay("App started", "push", appName, "-p", pathToApp, "-f", pathToManifest)
+		return expectCfToSay("App started", cfhome, "push", appName, "-p", pathToApp, "-f", pathToManifest)
 	}
 }
 
@@ -88,8 +91,10 @@ func Delete(ctx context.Context) error {
 	appNames = strings.Replace(appNames, ","+appNameToDelete, "", -1)
 	appNames = strings.Replace(appNames, appNameToDelete, "", -1)
 	ctx.PutString("appNames", appNames)
-	return expectCfToSay("Deleting app", "delete", appNameToDelete, "-f")
+	cfhome := cfhomeForWorker(ctx)
+	return expectCfToSay("Deleting app", cfhome, "delete", appNameToDelete, "-f")
 }
+
 func CopyAndReplaceText(srcDir string, dstDir string, searchText string, replaceText string) error {
 	return filepath.Walk(srcDir, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -135,23 +140,64 @@ func GenerateAndPush(ctx context.Context) error {
 		return err
 	}
 
+	cfhome := cfhomeForWorker(ctx)
 	if pathToManifest == "" {
-		return expectCfToSay("App started", "push", "pats-"+guid.String(), "-m", "64M", "-p", pathToApp)
+		return expectCfToSay("App started", cfhome, "push", "pats-"+guid.String(), "-m", "64M", "-p", pathToApp)
 	} else {
-		return expectCfToSay("App started", "push", "pats-"+guid.String(), "-p", pathToApp, "-f", pathToManifest)
+		return expectCfToSay("App started", cfhome, "push", "pats-"+guid.String(), "-p", pathToApp, "-f", pathToManifest)
 	}
 }
 
-func expectCfToSay(expect string, args ...string) error {
-	var outBuffer bytes.Buffer
-	oldWriter := ginkgo.GinkgoWriter
-	ginkgo.GinkgoWriter = bufio.NewWriter(&outBuffer)
-	cfOutBuffer := Cf(args...).Wait(10 * time.Minute).Out
-	cfContents := cfOutBuffer.Contents()
-	ginkgo.GinkgoWriter = oldWriter
-	if strings.Contains(string(cfContents), expect) {
-		return nil
-	} else {
-		return errors.New(string(cfContents))
+type ExpectToSay func(expect string, home string, args ...string) error
+
+var expectCfToSay ExpectToSay
+
+func NewExpectCFToSay(expectfunc ExpectToSay) {
+	expectCfToSay = expectfunc
+}
+
+func init() {
+	NewExpectCFToSay(func(expect string, cfhome string, args ...string) error {
+		var outBuffer bytes.Buffer
+		oldWriter := ginkgo.GinkgoWriter
+		ginkgo.GinkgoWriter = bufio.NewWriter(&outBuffer)
+		if cfhome == "" {
+			cfOutBuffer := Cf(args...).Wait(10 * time.Minute).Out
+			cfContents := cfOutBuffer.Contents()
+			ginkgo.GinkgoWriter = oldWriter
+			if strings.Contains(string(cfContents), expect) {
+				return nil
+			} else {
+				return errors.New(string(cfContents))
+			}
+		} else {
+			cfOutBuffer := envCf(cfhome, args...).Wait(10 * time.Minute).Out
+			cfContents := cfOutBuffer.Contents()
+			ginkgo.GinkgoWriter = oldWriter
+			if strings.Contains(string(cfContents), expect) {
+				return nil
+			} else {
+				return errors.New(string(cfContents))
+			}
+		}
+	})
+}
+
+func envCf(cfhome string, args ...string) *Session {
+	env := fmt.Sprintf("CF_HOME=%s", cfhome)
+	args = append([]string{env, "cf"}, args...)
+	return runner.Run("env", args...)
+}
+
+func cfhomeForWorker(ctx context.Context) string {
+	iterationIndex, exist := ctx.GetInt("iterationIndex")
+	if !exist {
+		return ""
 	}
+	cfhomes, exist := ctx.GetString("cfhomes")
+	if !exist || len(cfhomes) == 0 {
+		return ""
+	}
+	var cfhomeList = strings.Split(cfhomes, ",")
+	return cfhomeList[iterationIndex%len(cfhomeList)]
 }

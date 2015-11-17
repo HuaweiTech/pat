@@ -2,10 +2,14 @@ package workloads_test
 
 import (
 	//"crypto/md5"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/cloudfoundry-incubator/pat/context"
 
 	. "github.com/cloudfoundry-incubator/pat/workloads"
 	. "github.com/onsi/ginkgo"
@@ -82,4 +86,92 @@ var _ = Describe("cf Workloads", func() {
 			})
 		})
 	})
+
+	Describe("Mulit user", func() {
+		var (
+			replies    map[string]string
+			cli        *dummyCfCli
+			cliContext context.Context
+		)
+
+		BeforeEach(func() {
+			cliContext = context.New()
+			cliContext.PutInt("iterationIndex", 0)
+			replies = make(map[string]string)
+			cli = &dummyCfCli{"", make([]string, 0), replies}
+			NewExpectCFToSay(cli.expectCFToSay)
+		})
+		Context("when cfhomes is not set", func() {
+			BeforeEach(func() {
+				replies["push"] = "App started"
+				cliContext.PutString("app", "someapp")
+			})
+
+			It("cfhome should be empty string", func() {
+				err := Push(cliContext)
+				Ω(err).ShouldNot(HaveOccurred())
+				cli.ShouldHaveBeenCalledWith("", "push")
+
+			})
+		})
+
+		Context("when cfhomes is set", func() {
+			BeforeEach(func() {
+				replies["home1push"] = "App started"
+				replies["home2push"] = "App started"
+				replies["home3push"] = "App started"
+				cliContext.PutString("app", "someapp")
+				cliContext.PutString("cfhomes", "home1,home2,home3")
+			})
+
+			It("cfhome should be different from iterationIndex", func() {
+				cliContext.PutInt("iterationIndex", 0)
+				err := Push(cliContext)
+				Ω(err).ShouldNot(HaveOccurred())
+				cli.ShouldHaveBeenCalledWith("home1", "push")
+				cliContext.PutInt("iterationIndex", 1)
+				err = Push(cliContext)
+				Ω(err).ShouldNot(HaveOccurred())
+				cli.ShouldHaveBeenCalledWith("home2", "push")
+				cliContext.PutInt("iterationIndex", 2)
+				err = Push(cliContext)
+				Ω(err).ShouldNot(HaveOccurred())
+				cli.ShouldHaveBeenCalledWith("home3", "push")
+				cliContext.PutInt("iterationIndex", 3)
+				err = Push(cliContext)
+				Ω(err).ShouldNot(HaveOccurred())
+				cli.ShouldHaveBeenCalledWith("home1", "push")
+
+			})
+		})
+
+	})
+
 })
+
+type dummyCfCli struct {
+	cfhome  string
+	args    []string
+	replies map[string]string
+}
+
+func (cli *dummyCfCli) ShouldHaveBeenCalledWith(cfhome, method string, args ...string) {
+	Ω(cli.cfhome).Should(Equal(cfhome))
+	Ω(cli.args[0]).Should(Equal(method))
+}
+
+func (cli *dummyCfCli) expectCFToSay(expect, cfhome string, args ...string) error {
+	cli.cfhome = cfhome
+	for _, arg := range args {
+		cli.args = append(cli.args, arg)
+	}
+
+	if len(cli.args) == 0 {
+		return errors.New("no method")
+	}
+
+	if cli.replies[cli.cfhome+cli.args[0]] != expect {
+		return errors.New(fmt.Sprintf("expect :%s, but :%s", expect, cli.replies[cli.cfhome+cli.args[0]]))
+	}
+	return nil
+}
