@@ -16,79 +16,90 @@ type Context interface {
 	GetBool(k string) (bool, bool)
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(b []byte) error
-	Clone() contextMap
+	Clone() Context
 }
 
-type contextMap map[string]interface{}
+type contextMap struct {
+	c     map[string]interface{}
+	index int
+}
 
 func New() Context {
-	var c contextMap = make(contextMap)
+	var c = contextMap{
+		c:     make(map[string]interface{}),
+		index: 0,
+	}
 	return &c
 }
 
-func (c contextMap) PutString(k string, v string) {
-	c[k] = v
+func (c *contextMap) PutString(k string, v string) {
+	c.c[k] = v
 }
 
-func (c contextMap) GetString(k string) (string, bool) {
-	if c[k] == nil {
+func (c *contextMap) GetString(k string) (string, bool) {
+	if c.c[k] == nil {
 		return "", false
 	} else {
-		return c[k].(string), true
+		return c.c[k].(string), true
 	}
 }
 
-func (c contextMap) PutInt(k string, v int) {
+func (c *contextMap) PutInt(k string, v int) {
 	// saves as string, avoids json.Marshal turning int into json.numbers(float64)
-	c[k] = strconv.Itoa(v)
+	c.c[k] = strconv.Itoa(v)
 }
 
-func (c contextMap) GetInt(k string) (int, bool) {
-	if c[k] == nil {
+func (c *contextMap) GetInt(k string) (int, bool) {
+	if c.c[k] == nil {
 		return 0, false
 	} else {
-		value, _ := strconv.ParseInt(c[k].(string), 0, 0)
+		value, _ := strconv.ParseInt(c.c[k].(string), 0, 0)
 		return int(value), true
 	}
 }
 
-func (c contextMap) PutFloat64(k string, v float64) {
-	c[k] = v
+func (c *contextMap) PutFloat64(k string, v float64) {
+	c.c[k] = v
 }
 
-func (c contextMap) GetFloat64(k string) (float64, bool) {
-	if c[k] == nil {
+func (c *contextMap) GetFloat64(k string) (float64, bool) {
+	if c.c[k] == nil {
 		return 0, false
 	} else {
-		return c[k].(float64), true
+		return c.c[k].(float64), true
 	}
 }
 
-func (c contextMap) PutBool(k string, v bool) {
-	c[k] = v
+func (c *contextMap) PutBool(k string, v bool) {
+	c.c[k] = v
 }
 
-func (c contextMap) GetBool(k string) (bool, bool) {
-	if c[k] == nil {
+func (c *contextMap) GetBool(k string) (bool, bool) {
+	if c.c[k] == nil {
 		return false, false
 	} else {
-		return c[k].(bool), true
+		return c.c[k].(bool), true
 	}
 }
 
-func (c contextMap) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}(c))
+func (c *contextMap) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}(c.c))
 }
 
-func (c contextMap) UnmarshalJSON(b []byte) error {
-	var m map[string]interface{} = c
+func (c *contextMap) UnmarshalJSON(b []byte) error {
+	var m map[string]interface{} = c.c
 	return json.Unmarshal(b, &m)
 }
 
-func (c contextMap) Clone() contextMap {
-	var clone = make(contextMap)
-	for k, v := range c {
-		clone[k] = v
+func (c *contextMap) Clone() Context {
+	var clone = contextMap{
+		c: make(map[string]interface{}),
 	}
-	return clone
+	for k, v := range c.c {
+		clone.c[k] = v
+	}
+
+	clone.PutInt("workerIndex", c.index)
+	c.index++
+	return &clone
 }
